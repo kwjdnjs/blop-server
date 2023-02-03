@@ -1,4 +1,5 @@
 import { Controller, Get, Param } from '@nestjs/common';
+import { IdInfo } from './btc.model';
 import { BtcService } from './btc.service';
 
 @Controller('btc')
