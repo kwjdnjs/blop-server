@@ -1,12 +1,8 @@
 export interface IdInfo {
   network: string;
   id: string;
-  type: IdTypes;
+  type: IdType;
 }
 
-export enum IdTypes {
-  ADDR = 'ADDR',
-  TX = 'TX',
-  BLOCK = 'BLOCK',
-  UNKNOWN = 'UNKNOWN',
-}
+export const idTypeKeys = ['addr', 'tx', 'block', 'unknown'] as const;
+export type IdType = (typeof idTypeKeys)[number];

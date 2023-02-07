@@ -1,7 +1,7 @@
 import { HttpService } from '@nestjs/axios/dist';
 import { Injectable, Logger } from '@nestjs/common';
 import { catchError, firstValueFrom } from 'rxjs';
-import { IdInfo, IdTypes } from './btc.model';
+import { IdInfo, idTypeKeys, IdType } from './btc.model';
 
 @Injectable()
 export class BtcService {
@@ -9,8 +9,8 @@ export class BtcService {
   constructor(private readonly httpService: HttpService) {}
 
   async getIdType(id: string) {
-    const idTypeList: IdTypes[] = [IdTypes.ADDR, IdTypes.TX, IdTypes.BLOCK];
-    let idType: IdTypes = IdTypes.UNKNOWN;
+    const idTypeList = idTypeKeys;
+    let idType: IdType = 'unknown';
 
     for (const i in idTypeList) {
       try {
@@ -26,21 +26,11 @@ export class BtcService {
   }
 
   // get data from external api
-  async getRawData(id: string, reqType: IdTypes) {
+  async getRawData(id: string, reqType: IdType) {
     let dataUrl = 'https://blockchain.info/';
-
-    switch (reqType) {
-      case IdTypes.ADDR:
-        dataUrl += 'rawaddr/';
-        break;
-      case IdTypes.TX:
-        dataUrl += 'rawtx/';
-        break;
-      case IdTypes.BLOCK:
-        dataUrl += 'rawblock/';
-        break;
-      case IdTypes.UNKNOWN:
-        throw new Error('Requested type is unknown');
+    if (reqType == 'unknown') throw new Error('Requested type is unknown');
+    else {
+      dataUrl = `${dataUrl}raw${reqType}/`;
     }
 
     const DATA_URL = dataUrl + id;
@@ -58,7 +48,7 @@ export class BtcService {
   async getAddrInfo(id: string) {
     let data: object = {};
     try {
-      data = await this.getRawData(id, IdTypes.ADDR);
+      data = await this.getRawData(id, 'addr');
     } catch {
       console.log('error');
     }
@@ -69,7 +59,7 @@ export class BtcService {
   async getTxInfo(id: string) {
     let data: object = {};
     try {
-      data = await this.getRawData(id, IdTypes.TX);
+      data = await this.getRawData(id, 'tx');
     } catch {
       console.log('error');
     }
@@ -80,7 +70,7 @@ export class BtcService {
   async getBlockInfo(id: string) {
     let data: object = {};
     try {
-      data = await this.getRawData(id, IdTypes.BLOCK);
+      data = await this.getRawData(id, 'block');
     } catch {
       console.log('error');
     }
