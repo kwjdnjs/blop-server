@@ -1,5 +1,8 @@
+import { ElectrumClient } from '@gemlinkofficial/electrum-client-ts';
 import { HttpService } from '@nestjs/axios/dist';
 import { Injectable, Logger } from '@nestjs/common';
+import { address } from 'bitcoinjs-lib';
+import { sha256 } from 'bitcoinjs-lib/src/crypto';
 import { catchError, firstValueFrom } from 'rxjs';
 import { IdInfo, idTypeKeys, IdType } from './btc.model';
 
@@ -7,6 +10,28 @@ import { IdInfo, idTypeKeys, IdType } from './btc.model';
 export class BtcService {
   private readonly logger = new Logger(BtcService.name);
   constructor(private readonly httpService: HttpService) {}
+
+  async testEle() {
+    const client = new ElectrumClient('electrum.bitaroo.net', 50002, 'ssl');
+
+    try {
+      await client.connect(
+        'electrum-client-js', // optional client name
+        '1.4.2', // optional protocol version
+      );
+
+      const addr = '1AJbsFZ64EpEfS5UAjAfcUG8pH8Jn3rn1F';
+      const script = address.toOutputScript(addr);
+      const hash = sha256(script).reverse();
+      const header = await client.blockchain_scripthash_getHistory(
+        hash.toString('hex'),
+      );
+      await client.close();
+      return header;
+    } catch (err) {
+      return err;
+    }
+  }
 
   async getIdType(id: string) {
     const idTypeList = idTypeKeys;

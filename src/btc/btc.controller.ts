@@ -5,6 +5,11 @@ import { BtcService } from './btc.service';
 export class BtcController {
   constructor(private readonly btcService: BtcService) {}
 
+  @Get('/')
+  testEle() {
+    return this.btcService.testEle();
+  }
+
   @Get('type/:id')
   getIdType(@Param('id') id: string) {
     return this.btcService.getIdType(id);
