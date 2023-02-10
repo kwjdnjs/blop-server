@@ -1,7 +1,12 @@
 export interface IdInfo {
   network: string;
   id: string;
-  type: IdType;
+  idType: IdType;
+}
+
+export interface Data {
+  idInfo: IdInfo;
+  data: object;
 }
 
 export const idTypeKeys = ['addr', 'tx', 'block', 'unknown'] as const;

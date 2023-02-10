@@ -5,11 +5,6 @@ import { BtcService } from './btc.service';
 export class BtcController {
   constructor(private readonly btcService: BtcService) {}
 
-  @Get('/')
-  testEle() {
-    return this.btcService.testEle();
-  }
-
   @Get('type/:id')
   getIdType(@Param('id') id: string) {
     return this.btcService.getIdType(id);
@@ -17,16 +12,16 @@ export class BtcController {
 
   @Get('addr/:id')
   getAddrInfo(@Param('id') id: string) {
-    return this.btcService.getAddrInfo(id);
+    return this.btcService.getData(id, 'addr');
   }
 
   @Get('tx/:id')
   getTxInfo(@Param('id') id: string) {
-    return this.btcService.getTxInfo(id);
+    return this.btcService.getData(id, 'tx');
   }
 
   @Get('block/:id')
   getBlockInfo(@Param('id') id: string) {
-    return this.btcService.getBlockInfo(id);
+    return this.btcService.getData(id, 'block');
   }
 }

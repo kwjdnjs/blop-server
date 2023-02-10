@@ -3,101 +3,66 @@ import { HttpService } from '@nestjs/axios/dist';
 import { Injectable, Logger } from '@nestjs/common';
 import { address } from 'bitcoinjs-lib';
 import { sha256 } from 'bitcoinjs-lib/src/crypto';
-import { catchError, firstValueFrom } from 'rxjs';
-import { IdInfo, idTypeKeys, IdType } from './btc.model';
+import { IdInfo, idTypeKeys, IdType, Data } from './btc.model';
 
 @Injectable()
 export class BtcService {
   private readonly logger = new Logger(BtcService.name);
   constructor(private readonly httpService: HttpService) {}
 
-  async testEle() {
+  // get data from electrum json rpc
+  async getRawData(id: string, reqType: IdType) {
     const client = new ElectrumClient('electrum.bitaroo.net', 50002, 'ssl');
+    await client.connect(
+      'electrum-client-js', // optional client name
+      '1.4.2', // optional protocol version
+    );
 
-    try {
-      await client.connect(
-        'electrum-client-js', // optional client name
-        '1.4.2', // optional protocol version
-      );
+    let data = {};
 
-      const addr = '1AJbsFZ64EpEfS5UAjAfcUG8pH8Jn3rn1F';
-      const script = address.toOutputScript(addr);
+    if (reqType == 'addr') {
+      const script = address.toOutputScript(id);
       const hash = sha256(script).reverse();
-      const header = await client.blockchain_scripthash_getHistory(
+      data['tx_hashes'] = await client.blockchain_scripthash_getHistory(
         hash.toString('hex'),
       );
+      data['tx_hashes'] = data['tx_hashes'].reverse();
+    } else if (reqType == 'tx') {
+      data = await client.blockchain_transaction_get(id, true);
+    } else if (reqType == 'block') {
+      data = await client.blockchain_block_header(id, parseInt(id) + 1);
+    } else {
       await client.close();
-      return header;
-    } catch (err) {
-      return err;
+      throw new Error('unknown type error');
     }
+
+    await client.close();
+    return data;
   }
 
   async getIdType(id: string) {
     const idTypeList = idTypeKeys;
-    let idType: IdType = 'unknown';
+    const idInfo: IdInfo = { network: 'btc', id, idType: 'unknown' };
 
     for (const i in idTypeList) {
       try {
         await this.getRawData(id, idTypeList[i]);
-        idType = idTypeList[i];
+        idInfo['idType'] = idTypeList[i];
+        break;
       } catch {
         //console.log('error');
       }
     }
-
-    const idInfo: IdInfo = { network: 'btc', id: id, type: idType };
     return idInfo;
   }
 
-  // get data from external api
-  async getRawData(id: string, reqType: IdType) {
-    let dataUrl = 'https://blockchain.info/';
-    if (reqType == 'unknown') throw new Error('Requested type is unknown');
-    else {
-      dataUrl = `${dataUrl}raw${reqType}/`;
-    }
-
-    const DATA_URL = dataUrl + id;
-    const { data } = await firstValueFrom(
-      this.httpService.get(DATA_URL).pipe(
-        catchError((error) => {
-          //this.logger.error(error.response.data);
-          throw false;
-        }),
-      ),
-    );
-    return data;
-  }
-
-  async getAddrInfo(id: string) {
-    let data: object = {};
+  async getData(id: string, idType: IdType) {
+    const idInfo: IdInfo = { network: 'btc', id, idType };
+    const data: Data = { idInfo, data: {} };
     try {
-      data = await this.getRawData(id, 'addr');
+      data['data'] = await this.getRawData(id, idType);
     } catch {
-      console.log('error');
-    }
-
-    return data;
-  }
-
-  async getTxInfo(id: string) {
-    let data: object = {};
-    try {
-      data = await this.getRawData(id, 'tx');
-    } catch {
-      console.log('error');
-    }
-
-    return data;
-  }
-
-  async getBlockInfo(id: string) {
-    let data: object = {};
-    try {
-      data = await this.getRawData(id, 'block');
-    } catch {
-      console.log('error');
+      return { error: 'unknown type error' };
     }
 
     return data;
