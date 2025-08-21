@@ -98,4 +98,71 @@ export class BtcService {
 
     return data;
   }
+
+  async setClient() {
+    const client = new ElectrumClient('electrum.bitaroo.net', 50002, 'ssl');
+    await client.connect(
+      'electrum-client-js', // optional client name
+      '1.4.2', // optional protocol version
+    );
+
+    return client;
+  }
+
+  async getTx(id: string, isLight: boolean) {
+    const client = await this.setClient();
+
+    const data = {};
+
+    const tx_data = await client.blockchain_transaction_get(id, true);
+
+    // vin
+    const vin = tx_data['vin'];
+    const fullVinList = [];
+    for (const i in vin) {
+      const prevTx = await client.blockchain_transaction_get(
+        vin[i]['txid'],
+        true,
+      );
+
+      const fullVin = prevTx['vout'][vin[i]['vout']];
+      if (isLight) {
+        fullVin['addresses'] = fullVin['scriptPubKey']['addresses'];
+        delete fullVin.scriptPubKey;
+      } else {
+        fullVin['scriptSig'] = vin[i]['scriptSig'];
+        fullVin['sequence'] = vin[i]['sequence'];
+      }
+      fullVinList.push(fullVin);
+    }
+    data['vin'] = fullVinList;
+
+    // vout
+    const vout = tx_data['vout'];
+    if (isLight) {
+      for (const i in vout) {
+        vout[i]['addresses'] = vout[i]['scriptPubKey']['addresses'];
+        delete vout[i].scriptPubKey;
+      }
+    }
+    data['vout'] = vout;
+
+    client.close();
+    return data;
+  }
+
+  async getAddr(id: string) {
+    const client = await this.setClient();
+    let data;
+
+    const script = address.toOutputScript(id);
+    const hash = sha256(script).reverse();
+    data['tx_hashes'] = await client.blockchain_scripthash_getHistory(
+      hash.toString('hex'),
+    );
+    data['tx_hashes'] = data['tx_hashes'].reverse();
+
+    client.close();
+    return data;
+  }
 }
